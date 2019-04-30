@@ -15,8 +15,11 @@
 
 #include "Particle.h"
 //Represents Connection between two indices
-int k_s = 10.0;
-int k_d = 0.018;
+float k_s = 19.0;
+float k_d = 0.35;
+float airResistance = 0.28;
+
+glm::vec3 sphereCenter = glm::vec3();
 
 class Connection{
 public:
@@ -29,7 +32,7 @@ public:
         this->restLength = restLength;
     }
     bool operator==(Connection connection){
-        return (connection.index1 == this->index2 && connection.index2 == this->index1) || (connection.index1 == this->index1 && connection.index2 == this->index2);
+        return ((connection.index1 == this->index2) && (connection.index2 == this->index1)) || ((connection.index1 == this->index1) && (connection.index2 == this->index2));
     }
 };
 
@@ -49,6 +52,16 @@ public:
         this->particles = particles;
         this->original_vertex_indices = original_vertex_indices;
         setSprings();
+        for(int i=0;i<connections.size();i++){
+            if(connections[i].index1==5){
+                std::cout << "index "<< connections[i].index1 << " is connected to "<< connections[i].index2 << std::endl;
+            }
+            if(connections[i].index2==5){
+                std::cout << "(reverse)index "<< connections[i].index2 << " is connected to "<< connections[i].index1 << std::endl;
+            }
+        }
+        
+        
     }
     void clearForce(){
         for(int i=0;i<particles->size();i++){
@@ -58,6 +71,12 @@ public:
     void computeForces(){
         computeGravity();
         computeDampedSpringForce();
+        computeAirResistance();
+        //Fix some parts to the original location so the clothing doesn't move.
+        (*particles)[962].force = glm::vec3(0.0);
+        (*particles)[963].force = glm::vec3(0.0);
+        (*particles)[2571].force = glm::vec3(0.0);
+        (*particles)[2572].force = glm::vec3(0.0);
     }
     std::vector<ParticleDimensionHolder> getDerivative(){
         std::vector<ParticleDimensionHolder> pdhVector;
@@ -85,11 +104,6 @@ public:
             (*particles)[i].velocity = pdhVector[i].v_a;
         }
     }
-    void applyConstraints(){
-        //Fix some parts to the original location so the clothing doesn't move.
-        (*particles)[962].position = glm::vec3(7.693500, 126.917999, -8.627679);
-        (*particles)[2571].position = glm::vec3(-8.058400, 126.328003, -8.025779);
-    }
     
 private:
     std::vector<Connection> connections;
@@ -113,7 +127,6 @@ private:
             unsigned int first_vertex_index = (*original_vertex_indices)[i]-1;
             unsigned int second_vertex_index = (*original_vertex_indices)[i+1]-1;
             unsigned int third_vertex_index = (*original_vertex_indices)[i+2]-1;
-            
             Connection connection1(first_vertex_index, second_vertex_index, glm::distance((*particles)[first_vertex_index].position, (*particles)[second_vertex_index].position));
             Connection connection2(second_vertex_index, third_vertex_index, glm::distance((*particles)[second_vertex_index].position, (*particles)[third_vertex_index].position));
             Connection connection3(third_vertex_index, first_vertex_index, glm::distance((*particles)[third_vertex_index].position, (*particles)[first_vertex_index].position));
@@ -125,19 +138,18 @@ private:
                 if(connection1 == connections[j]){
                     //std::cout << "is redundant!" << std::endl;
                     isRedundant1 = true;
-                    break;
                 }
                 if(connection2 == connections[j]){
                     //std::cout << "is redundant!" << std::endl;
                     isRedundant2 = true;
-                    break;
                 }
                 if(connection3 == connections[j]){
                     //std::cout << "is redundant!" << std::endl;
                     isRedundant3 = true;
+                }
+                if(isRedundant1 && isRedundant2 && isRedundant3){
                     break;
                 }
-                
             }
             if(!isRedundant1){
                 //std::cout << connection1.index1 << " and " << connection1.index2 << "connected." << std::endl;
@@ -160,14 +172,13 @@ private:
         unsigned int second_vertex_index = (*original_vertex_indices)[i+1]-1;
         unsigned int third_vertex_index = (*original_vertex_indices)[i+2]-1;
         //First for the first_vertex_index
-        for(int j=0;j<original_vertex_indices->size();j+=3){
+        for(int j=i+3;j<original_vertex_indices->size();j+=3){
             unsigned int first_vertex_index_prime = (*original_vertex_indices)[j]-1;
             unsigned int second_vertex_index_prime = (*original_vertex_indices)[j+1]-1;
             unsigned int third_vertex_index_prime = (*original_vertex_indices)[j+2]-1;
             if((((second_vertex_index == second_vertex_index_prime) && (third_vertex_index == third_vertex_index_prime)) || ((second_vertex_index == third_vertex_index_prime) && (third_vertex_index == second_vertex_index_prime))) && (first_vertex_index != first_vertex_index_prime)){
                 Connection connection(first_vertex_index, first_vertex_index_prime, glm::distance((*particles)[first_vertex_index].position, (*particles)[first_vertex_index_prime].position));
                 std::cout << connection.index1 << " and " << connection.index2 << " connected." << std::endl;
-                
                 bool isRedundant = false;
                 for(int j=0;j<connections.size();j++){
                     if(connection == connections[j]){
@@ -320,10 +331,15 @@ private:
             l_size = glm::length(l);
             l_dot = (*particles)[connections[i].index1].velocity - (*particles)[connections[i].index2].velocity;
             restlength = connections[i].restLength;
-            glm::vec3 f1 = -(k_s * (l_size - restlength) + k_d/l_size * (glm::dot(l_dot,l))) * (l/l_size);
+            glm::vec3 f = -(k_s * (l_size - restlength) + k_d/l_size * (glm::dot(l_dot,l))) * (l/l_size);
             //std::cout << f1.x << " "<<f1.y << " " << f1.z << std::endl;
-            (*particles)[connections[i].index1].force += f1;
-            (*particles)[connections[i].index2].force += -f1;
+            (*particles)[connections[i].index1].force += f;
+            (*particles)[connections[i].index2].force += -f;
+        }
+    }
+    void computeAirResistance(){
+        for(int i=0;i<particles->size();i++){
+            (*particles)[i].force -= airResistance * (*particles)[i].velocity;
         }
     }
 };
