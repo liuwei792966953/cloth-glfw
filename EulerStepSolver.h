@@ -93,7 +93,7 @@ public:
         formBuffer();
         particleSystem = new ParticleSystem(&(this->particles), &(this->original_vertex_indices));
     }
-    
+    //The most important step!
     void EulerStep(float deltaT){
         particleSystem->clearForce();
         particleSystem->computeForces();
@@ -103,14 +103,26 @@ public:
         std::vector<ParticleDimensionHolder> temp2 = particleSystem->getState();
         addVectors(temp1, temp2);
         particleSystem->setState(temp2);
-        particleSystem->applyConstraints();
+        
+        //collision check
+        
+        
+        //This is just the pseudo-code according to the pixar slides.
+        //particleSystem->checkCollision();
+        /* //These parts are not necessary for my program. 이건 솔직히 완전 비탄성 충돌일때만 해당하는 얘기지ㅋㅋㅋㅋ거의 가능한 게 아님.
+        //particleSystem->revertSystemToCollisionMoment();
+        //particleSystem->modifyV(); //For each particle that collided. slide C page 22
+        //if it's in 'contact' where dot(N,v) < epsilon, then add contact force. also add frictional force too.
+         */
+        //particleSystem->setState(temp2);
+        
         modifyRenderData();
     }
     
     void draw(Shader ourShader){
         ourShader.setVec3("lightDirection", glm::vec3(0.2f, 1.0f, 0.3f));
-        //Explodes from 0.07. If I add the 2 point constraints, it becomes even lower than that.
-        EulerStep(0.001);
+        //Explodes at 0.002
+        EulerStep(0.002);
         modifyBuffer();
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, out_indices.size(), GL_UNSIGNED_INT, 0);
@@ -118,7 +130,3 @@ public:
 };
 
 #endif /* EulerStepSolver_h */
-
-//TODO in the future!
-//Add more springs via 'Connection'
-//Add more constraints. 2 is not enough.
