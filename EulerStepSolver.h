@@ -102,10 +102,10 @@ public:
         scaleVector(temp1, deltaT);
         std::vector<ParticleDimensionHolder> temp2 = particleSystem->getState();
         addVectors(temp1, temp2);
-        particleSystem->setState(temp2);
+        //particleSystem->setState(temp2);
         
         //collision check
-        
+        particleSystem->resolveCollision(temp2);
         
         //This is just the pseudo-code according to the pixar slides.
         //particleSystem->checkCollision();
@@ -114,7 +114,7 @@ public:
         //particleSystem->modifyV(); //For each particle that collided. slide C page 22
         //if it's in 'contact' where dot(N,v) < epsilon, then add contact force. also add frictional force too.
          */
-        //particleSystem->setState(temp2);
+        particleSystem->setState(temp2);
         
         modifyRenderData();
     }
@@ -122,7 +122,7 @@ public:
     void draw(Shader ourShader){
         ourShader.setVec3("lightDirection", glm::vec3(0.2f, 1.0f, 0.3f));
         //Explodes at 0.002
-        EulerStep(0.002);
+        EulerStep(0.005);
         modifyBuffer();
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, out_indices.size(), GL_UNSIGNED_INT, 0);
