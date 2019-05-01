@@ -12,9 +12,9 @@ https://www.youtube.com/watch?v=tA5-Y_i0c2A&feature=youtu.be
 Collision detection with a sphere.
 
 ---update May 1st, 2019---
-Added a sphere within the shirt to make it look like a breast.
+Added a sphere within the shirt to make it look like a breast. (Basic collision detection + resolution)
 
 https://www.youtube.com/watch?v=fn-xVN4-P2s&feature=youtu.be
 
 ---To Add---
-Now apply the shirt to a BVH model -> Make it walk around with the shirt on.
+Now apply the shirt to a BVH model -> Make it walk around with the shirt on. Make sure the arm is also handled as well.
