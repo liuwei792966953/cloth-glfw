@@ -16,8 +16,8 @@
 #include "Particle.h"
 //Represents Connection between two indices
 float k_s = 19.0;
-float k_d = 0.35;
-float airResistance = 0.28;
+float k_d = 0.82;
+float airResistance = 0.32;
 
 glm::vec3 sphereCenter = glm::vec3();
 
@@ -76,7 +76,7 @@ public:
         (*particles)[962].force = glm::vec3(0.0);
         (*particles)[963].force = glm::vec3(0.0);
         (*particles)[2571].force = glm::vec3(0.0);
-        (*particles)[2572].force = glm::vec3(0.0);
+        (*particles)[2570].force = glm::vec3(0.0);
     }
     std::vector<ParticleDimensionHolder> getDerivative(){
         std::vector<ParticleDimensionHolder> pdhVector;
@@ -102,6 +102,24 @@ public:
         for(int i=0;i<pdhVector.size();i++){
             (*particles)[i].position = pdhVector[i].x_v;
             (*particles)[i].velocity = pdhVector[i].v_a;
+        }
+    }
+    
+    void resolveCollision(std::vector<ParticleDimensionHolder>& pdhVector){
+        //This will be the center of the sphere
+        glm::vec3 COM = glm::vec3(0.716704, 76.082527, -0.905833);
+        float radius = 18.5;
+        for(int i=0;i<pdhVector.size();i++){
+            glm::vec3 center2Particle = pdhVector[i].x_v - COM;
+            float length = glm::length(center2Particle);
+            glm::vec3 n_center2Particle = glm::normalize(center2Particle);
+            if(length < radius){
+                pdhVector[i].x_v = pdhVector[i].x_v + (float)(radius-length) * n_center2Particle;
+                glm::vec3 v = pdhVector[i].v_a;
+                glm::vec3 v_n = glm::dot(n_center2Particle, v) * n_center2Particle;
+                glm::vec3 v_t = v-v_n;
+                pdhVector[i].v_a = v_t - (0.4f*v_n);
+            }
         }
     }
     
